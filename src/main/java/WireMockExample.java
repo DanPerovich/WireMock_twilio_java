@@ -4,6 +4,7 @@ import com.twilio.Twilio;
 import com.twilio.exception.ApiException;
 import com.twilio.http.*;
 import com.twilio.rest.api.v2010.account.Message;
+import com.twilio.rest.api.v2010.account.MessageCreator;
 import com.twilio.type.PhoneNumber;
 
 import io.github.cdimascio.dotenv.Dotenv;
@@ -36,13 +37,13 @@ public class WireMockExample {
                 .httpClient(new CustomHttpClient("https://twilio.wiremockapi.cloud"))
                 .build();
 
-        Message message = Message.creator(
-                        new PhoneNumber(dotenv.get("TWILIO_TO_NUMBER")),
-                        new PhoneNumber(dotenv.get("TWILIO_FROM_NUMBER")),
-                        "Hello from WireMock Cloud Java example.")
-                .create();
+        MessageCreator message = Message.creator(
+                new PhoneNumber(dotenv.get("TWILIO_TO_NUMBER")),
+                new PhoneNumber(dotenv.get("TWILIO_FROM_NUMBER")),
+                "Where's Wallace?");
+        message.create();
 
-        System.out.println(message.getSid());
+        //System.out.println(message.getSid());
     }
 }
 

@@ -2,6 +2,8 @@
 
 import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Message;
+import com.twilio.rest.api.v2010.account.MessageCreator;
+import com.twilio.type.PhoneNumber;
 
 import io.github.cdimascio.dotenv.Dotenv;
 
@@ -15,12 +17,13 @@ public class Example {
 
         //Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
         Twilio.init(dotenv.get("TWILIO_ACCOUNT_SID"), dotenv.get("TWILIO_AUTH_TOKEN"));
-        Message message = Message.creator(
-                        new com.twilio.type.PhoneNumber(dotenv.get("TWILIO_TO_NUMBER")),
-                        new com.twilio.type.PhoneNumber(dotenv.get("TWILIO_FROM_NUMBER")),
-                        "Where's Wallace?")
-                .create();
 
-        System.out.println(message.getSid());
+        MessageCreator message = Message.creator(
+                        new PhoneNumber(dotenv.get("TWILIO_TO_NUMBER")),
+                        new PhoneNumber(dotenv.get("TWILIO_FROM_NUMBER")),
+                        "Where's Wallace?");
+        message.create();
+
+        //System.out.println(message.getSid());
     }
 }
