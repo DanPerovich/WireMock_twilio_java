@@ -90,53 +90,27 @@ class CustomHttpClient extends NetworkHttpClient {
 
     @Override
     public Response makeRequest(Request request) {
-        HttpMethod method = request.getMethod();
-        String url = request.constructURL().toString();
-        url = url.replace("https://api.twilio.com", baseUrl);
-        RequestBuilder builder = RequestBuilder.create(method.toString())
-                .setUri(url)
-                .setVersion(HttpVersion.HTTP_1_1)
-                .setCharset(StandardCharsets.UTF_8);
+        String url = request
+                .constructURL()
+                .toString()
+                .replace("https://api.twilio.com", baseUrl);
 
-        if (request.requiresAuthentication()) {
-            builder.addHeader(HttpHeaders.AUTHORIZATION, request.getAuthString());
+        Request newRequest = new Request(
+                request.getMethod(),
+                url
+        );
+
+        for (Map.Entry<String, List<String>> entry: request.getQueryParams().entrySet()) {
+            for (String value: entry.getValue()) {
+                newRequest.addQueryParam(entry.getKey(), value);
+            }
         }
-
-        for (Map.Entry<String, List<String>> entry : request.getHeaderParams().entrySet()) {
-            for (String value : entry.getValue()) {
-                builder.addHeader(entry.getKey(), value);
+        for (Map.Entry<String, List<String>> entry: request.getPostParams().entrySet()) {
+            for (String value: entry.getValue()) {
+                newRequest.addPostParam(entry.getKey(), value);
             }
         }
 
-        if (method == HttpMethod.POST) {
-            builder.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
-
-            for (Map.Entry<String, List<String>> entry : request.getPostParams().entrySet()) {
-                for (String value : entry.getValue()) {
-                    builder.addParameter(entry.getKey(), value);
-                }
-            }
-        }
-        builder.addHeader(HttpHeaders.USER_AGENT, "custom-wiremock-http-client");
-
-        HttpResponse response = null;
-
-        try {
-            response = client.execute(builder.build());
-            HttpEntity entity = response.getEntity();
-            return new Response(
-                    // Consume the entire HTTP response before returning the stream
-                    entity == null ? null : new BufferedHttpEntity(entity).getContent(),
-                    response.getStatusLine().getStatusCode(),
-                    response.getAllHeaders()
-            );
-        } catch (IOException e) {
-            throw new ApiException(e.getMessage(), e);
-        } finally {
-
-            // Ensure this response is properly closed
-            HttpClientUtils.closeQuietly(response);
-
-        }
+        return super.makeRequest(newRequest);
     }
 }
