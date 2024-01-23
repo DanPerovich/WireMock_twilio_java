@@ -1,23 +1,12 @@
 // Install the Java helper library from twilio.com/docs/java/install
-
 import com.twilio.Twilio;
-import com.twilio.exception.ApiException;
 import com.twilio.http.*;
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.rest.api.v2010.account.MessageCreator;
 import com.twilio.type.PhoneNumber;
 
 import io.github.cdimascio.dotenv.Dotenv;
-import org.apache.http.client.methods.RequestBuilder;
-import org.apache.http.HttpVersion;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpEntity;
-import org.apache.http.entity.BufferedHttpEntity;
-import org.apache.http.client.utils.HttpClientUtils;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -40,10 +29,10 @@ public class WireMockExample {
         MessageCreator message = Message.creator(
                 new PhoneNumber(dotenv.get("TWILIO_TO_NUMBER")),
                 new PhoneNumber(dotenv.get("TWILIO_FROM_NUMBER")),
-                "Where's Wallace?");
-        message.create();
+                "Hello from WireMock Cloud Java example.");
+        Message response = message.create(customClient);
 
-        //System.out.println(message.getSid());
+        System.out.println(response.getSid());
     }
 }
 
@@ -57,53 +46,27 @@ class CustomHttpClient extends NetworkHttpClient {
 
     @Override
     public Response makeRequest(Request request) {
-        HttpMethod method = request.getMethod();
-        String url = request.constructURL().toString();
-        url = url.replace("https://api.twilio.com", baseUrl);
-        RequestBuilder builder = RequestBuilder.create(method.toString())
-                .setUri(url)
-                .setVersion(HttpVersion.HTTP_1_1)
-                .setCharset(StandardCharsets.UTF_8);
+        String url = request
+                .constructURL()
+                .toString()
+                .replace("https://api.twilio.com", baseUrl);
 
-        if (request.requiresAuthentication()) {
-            builder.addHeader(HttpHeaders.AUTHORIZATION, request.getAuthString());
+        Request newRequest = new Request(
+                request.getMethod(),
+                url
+        );
+
+        for (Map.Entry<String, List<String>> entry: request.getQueryParams().entrySet()) {
+            for (String value: entry.getValue()) {
+                newRequest.addQueryParam(entry.getKey(), value);
+            }
         }
-
-        for (Map.Entry<String, List<String>> entry : request.getHeaderParams().entrySet()) {
-            for (String value : entry.getValue()) {
-                builder.addHeader(entry.getKey(), value);
+        for (Map.Entry<String, List<String>> entry: request.getPostParams().entrySet()) {
+            for (String value: entry.getValue()) {
+                newRequest.addPostParam(entry.getKey(), value);
             }
         }
 
-        if (method == HttpMethod.POST) {
-            builder.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
-
-            for (Map.Entry<String, List<String>> entry : request.getPostParams().entrySet()) {
-                for (String value : entry.getValue()) {
-                    builder.addParameter(entry.getKey(), value);
-                }
-            }
-        }
-        builder.addHeader(HttpHeaders.USER_AGENT, "custom-wiremock-http-client");
-
-        HttpResponse response = null;
-
-        try {
-            response = client.execute(builder.build());
-            HttpEntity entity = response.getEntity();
-            return new Response(
-                    // Consume the entire HTTP response before returning the stream
-                    entity == null ? null : new BufferedHttpEntity(entity).getContent(),
-                    response.getStatusLine().getStatusCode(),
-                    response.getAllHeaders()
-            );
-        } catch (IOException e) {
-            throw new ApiException(e.getMessage(), e);
-        } finally {
-
-            // Ensure this response is properly closed
-            HttpClientUtils.closeQuietly(response);
-
-        }
+        return super.makeRequest(newRequest);
     }
 }
